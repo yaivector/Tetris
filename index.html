@@ -102,27 +102,6 @@
             background-color: #fff;
             margin: 2px 0;
         }
-        
-        .pause-btn {
-            background: #000;
-            color: #fff;
-            border: 2px solid #fff;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 8px 2px;
-            width: 100%;
-            letter-spacing: 1px;
-            cursor: pointer;
-            outline: none;
-            text-align: center;
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-            -webkit-tap-highlight-color: transparent;
-        }
-        .pause-btn:active {
-            background: #fff;
-            color: #000;
-        }
 
         .overlay {
             position: absolute;
@@ -179,13 +158,14 @@
             50% { opacity: 0.3; }
         }
 
+        /* Layout ปุ่มคอนโทรลด้านล่าง */
         .controls-container {
             display: flex;
             justify-content: space-between;
             width: 350px;
             margin-top: 15px;
             padding: 0 10px;
-            align-items: center;
+            align-items: flex-start;
         }
         
         .dpad-group {
@@ -199,12 +179,15 @@
             gap: 14px;
         }
 
+        /* กลุ่มปุ่มด้านขวา (Pause + Rotate) */
         .action-group {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
+            gap: 18px;
         }
 
+        /* ปุ่มวงกลมขนาด 72px ดีไซน์เดียวกันทั้งหมด */
         .control-btn {
             width: 72px;
             height: 72px;
@@ -256,7 +239,7 @@
                     TAP BUTTONS BELOW<br>
                     <b>↓</b> : SOFT DROP (HOLD)<br>
                     <b>↻</b> : ROTATE BLOCK<br>
-                    <b>PAUSED</b> : PAUSE / CONTINUE
+                    <b>❚❚</b> : PAUSE / CONTINUE
                 </div>
 
                 <div class="blink-btn">PRESS SPACE / TAP<br>TO START</div>
@@ -290,12 +273,12 @@
                     <div class="stat-value" id="level">1</div>
                 </div>
             </div>
-
-            <button class="pause-btn" id="btn-side-pause" tabindex="-1">PAUSED</button>
         </div>
     </div>
 
+    <!-- Area ปุ่มกดสัมผัส -->
     <div class="controls-container">
+        <!-- ฝั่งซ้าย: D-Pad -->
         <div class="dpad-group">
             <div class="dpad-row">
                 <button class="control-btn" id="btn-left" tabindex="-1">←</button>
@@ -304,7 +287,9 @@
             <button class="control-btn" id="btn-down" tabindex="-1">↓</button>
         </div>
 
+        <!-- ฝั่งขวา: Pause (อยู่บน) และ Rotate (รูปล่าง) -->
         <div class="action-group">
+            <button class="control-btn" id="btn-pause" tabindex="-1" style="font-size: 24px;">❚❚</button>
             <button class="control-btn" id="btn-rotate" tabindex="-1">↻</button>
         </div>
     </div>
@@ -446,11 +431,9 @@ function addScore(points) {
     updateScore();
 }
 
-/* แก้ไขระบบการตรวจจับและเคลียร์แถวเต็มแบบสมบูรณ์ */
 function arenaSweep() {
     clearedRows = [];
     
-    // ตรวจสอบหาแถวที่เต็มทั้งหมด
     for (let y = arena.length - 1; y >= 0; --y) {
         let isFull = true;
         for (let x = 0; x < arena[y].length; ++x) {
@@ -469,7 +452,6 @@ function arenaSweep() {
         playSound('clear');
 
         setTimeout(() => {
-            // ทำการลบแถวที่เต็มออกจาก Arena และดันแถวใหม่ลงมา
             for (let y = arena.length - 1; y >= 0; --y) {
                 let isFull = true;
                 for (let x = 0; x < arena[y].length; ++x) {
@@ -481,7 +463,7 @@ function arenaSweep() {
                 if (isFull) {
                     const row = arena.splice(y, 1)[0].fill(0);
                     arena.unshift(row);
-                    y++; // ขยับ y เพิ่มกลับขึ้นไปเพื่อไม่ให้ลูปข้ามแถวที่เลื่อนลงมาใหม่
+                    y++;
                 }
             }
 
@@ -717,9 +699,8 @@ function stopSoftDropLoop() {
     }
 }
 
-/* ปรับปรุง Keyboard Listeners ป้องกันปุ่มติดโฟกัส */
+/* Keyboard Events */
 document.addEventListener('keydown', event => {
-    // ป้องกันปุ่ม Spacebar เลื่อนหน้าจอ
     if (event.keyCode === 32) {
         event.preventDefault();
     }
@@ -759,15 +740,23 @@ const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 const btnRotate = document.getElementById('btn-rotate');
 const btnDown = document.getElementById('btn-down');
-const btnSidePause = document.getElementById('btn-side-pause');
+const btnPause = document.getElementById('btn-pause');
 
-btnSidePause.addEventListener('click', (e) => {
+/* ปุ่ม Pause ใหม่แบบวงกลม */
+btnPause.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!isGameStarted) { startGame(); return; }
+    if (isGameOver) { restartGame(); return; }
+    togglePause();
+});
+btnPause.addEventListener('click', (e) => {
     e.target.blur();
     if (!isGameStarted) { startGame(); return; }
     if (isGameOver) { restartGame(); return; }
     togglePause();
 });
 
+/* ปุ่ม D-Pad และ Rotate */
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerRotate(1); });
