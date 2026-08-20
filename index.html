@@ -163,9 +163,9 @@
             display: flex;
             justify-content: space-between;
             width: 350px;
-            margin-top: 15px;
+            margin-top: -65px; /* ดึงฝั่งขวาขึ้นไปตำแหน่งตามภาพตัวอย่าง */
             padding: 0 10px;
-            align-items: flex-start;
+            align-items: flex-end;
         }
         
         .dpad-group {
@@ -173,21 +173,22 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
+            margin-top: 80px; /* เว้นพื้นที่ให้ D-pad อยู่ด้านล่างอย่างเหมาะสม */
         }
         .dpad-row {
             display: flex;
             gap: 14px;
         }
 
-        /* กลุ่มปุ่มด้านขวา (Pause + Rotate) */
+        /* กลุ่มปุ่มด้านขวา เพิ่มระยะห่าง gap เป็น 80px */
         .action-group {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 18px;
+            gap: 80px; 
         }
 
-        /* ปุ่มวงกลมขนาด 72px ดีไซน์เดียวกันทั้งหมด */
+        /* ปุ่มวงกลมขนาด 72px */
         .control-btn {
             width: 72px;
             height: 72px;
@@ -287,7 +288,7 @@
             <button class="control-btn" id="btn-down" tabindex="-1">↓</button>
         </div>
 
-        <!-- ฝั่งขวา: Pause (อยู่บน) และ Rotate (รูปล่าง) -->
+        <!-- ฝั่งขวา: Pause (เว้นระยะห่างด้านบนมากขึ้น) และ Rotate (อยู่ด้านล่าง) -->
         <div class="action-group">
             <button class="control-btn" id="btn-pause" tabindex="-1" style="font-size: 24px;">❚❚</button>
             <button class="control-btn" id="btn-rotate" tabindex="-1">↻</button>
@@ -742,7 +743,7 @@ const btnRotate = document.getElementById('btn-rotate');
 const btnDown = document.getElementById('btn-down');
 const btnPause = document.getElementById('btn-pause');
 
-/* ปุ่ม Pause ใหม่แบบวงกลม */
+/* ปุ่ม Pause */
 btnPause.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (!isGameStarted) { startGame(); return; }
