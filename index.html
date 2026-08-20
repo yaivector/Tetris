@@ -161,7 +161,7 @@
         .controls-container {
             display: flex;
             justify-content: space-between;
-            width: 340px;
+            width: 350px;
             margin-top: 15px;
             padding: 0 10px;
             align-items: center;
@@ -172,11 +172,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         .dpad-row {
             display: flex;
-            gap: 12px;
+            gap: 14px;
         }
 
         /* ปุ่มฝั่งขวา */
@@ -186,36 +186,28 @@
             justify-content: center;
         }
 
-        /* ปุ่มทั่วไปฝั่งซ้าย */
+        /* ปรับปุ่มให้ขนาดใหญ่เท่ากันหมด (72px) เพื่อคนเล็บยาวกดง่าย */
         .control-btn {
-            width: 52px;
-            height: 52px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             background: #fff;
             color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            font-size: 32px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.25);
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
             border: none;
             outline: none;
             -webkit-tap-highlight-color: transparent;
         }
-        
-        /* ปุ่มหมุนขนาดใหญ่พิเศษฝั่งขวา */
-        .btn-rotate-large {
-            width: 80px;
-            height: 80px;
-            font-size: 38px;
-            box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
-        }
 
         .control-btn:active {
             background: #ccc;
-            transform: scale(0.95);
+            transform: scale(0.94);
         }
 
         .mobile-guide { display: none; }
@@ -286,7 +278,7 @@
 
     <!-- On-screen Control Buttons Layout -->
     <div class="controls-container">
-        <!-- ฝั่งซ้าย: ←  → และ ↓ อยู่ตรงกลางล่าง -->
+        <!-- ฝั่งซ้าย: ปุ่มทิศทางใหญ่ 72px -->
         <div class="dpad-group">
             <div class="dpad-row">
                 <button class="control-btn" id="btn-left">←</button>
@@ -295,9 +287,9 @@
             <button class="control-btn" id="btn-down">↓</button>
         </div>
 
-        <!-- ฝั่งขวา: ปุ่มหมุนใหญ่เด่นปุ่มเดียว -->
+        <!-- ฝั่งขวา: ปุ่มหมุนใหญ่ 72px เท่ากัน -->
         <div class="action-group">
-            <button class="control-btn btn-rotate-large" id="btn-rotate">↻</button>
+            <button class="control-btn" id="btn-rotate">↻</button>
         </div>
     </div>
 </div>
@@ -370,6 +362,8 @@ const arena = createMatrix(12, 20);
 let isGameStarted = false;
 let isPaused = false;
 let isGameOver = false;
+let isAnimatingClear = false;
+let clearedRows = [];
 
 let nextPieceMatrix = null;
 let softDropIntervalTimer = null;
@@ -437,26 +431,46 @@ function addScore(points) {
 }
 
 function arenaSweep() {
-    let rowCount = 0;
-    outer: for (let y = arena.length - 1; y > 0; --y) {
+    clearedRows = [];
+    for (let y = arena.length - 1; y > 0; --y) {
+        let isFull = true;
         for (let x = 0; x < arena[y].length; ++x) {
-            if (arena[y][x] === 0) continue outer;
+            if (arena[y][x] === 0) {
+                isFull = false;
+                break;
+            }
         }
-        const row = arena.splice(y, 1)[0].fill(0);
-        arena.unshift(row);
-        ++y;
-        rowCount++;
+        if (isFull) {
+            clearedRows.push(y);
+        }
     }
 
-    if (rowCount > 0) {
+    if (clearedRows.length > 0) {
+        isAnimatingClear = true;
         playSound('clear');
-        let pointsGain = 0;
-        if (rowCount === 1) pointsGain = 1;
-        else if (rowCount === 2) pointsGain = 2;
-        else if (rowCount === 3) pointsGain = 3;
-        else if (rowCount === 4) pointsGain = 5;
-        
-        addScore(pointsGain);
+
+        // แสดงเอฟเฟกซ์กระพริบสว่าง (Flash Effect) ก่อนเคลื่อนลง
+        setTimeout(() => {
+            clearedRows.forEach(y => {
+                const row = arena.splice(y, 1)[0].fill(0);
+                arena.unshift(row);
+            });
+
+            let pointsGain = 0;
+            const count = clearedRows.length;
+            if (count === 1) pointsGain = 1;
+            else if (count === 2) pointsGain = 2;
+            else if (count === 3) pointsGain = 3;
+            else if (count >= 4) pointsGain = 5;
+            
+            addScore(pointsGain);
+
+            clearedRows = [];
+            isAnimatingClear = false;
+            playerReset();
+        }, 150);
+    } else {
+        playerReset();
     }
 }
 
@@ -480,7 +494,16 @@ function draw() {
     }
 
     drawMatrix(arena, {x: 0, y: 0}, context);
-    if (player.matrix) {
+
+    // วาด Flash animation แถวที่กำลังจะถูกเคลียร์
+    if (isAnimatingClear && clearedRows.length > 0) {
+        context.fillStyle = '#FFF';
+        clearedRows.forEach(y => {
+            context.fillRect(0, y, 12, 1);
+        });
+    }
+
+    if (player.matrix && !isAnimatingClear) {
         drawMatrix(player.matrix, player.pos, context);
     }
 
@@ -524,7 +547,7 @@ function update(time = 0) {
     const deltaTime = time - lastTime;
     lastTime = time;
 
-    if (isGameStarted && !isPaused && !isGameOver) {
+    if (isGameStarted && !isPaused && !isGameOver && !isAnimatingClear) {
         dropCounter += deltaTime;
         if (dropCounter > dropInterval) {
             playerDrop(false);
@@ -538,7 +561,7 @@ function update(time = 0) {
 }
 
 function playerDrop(isManual = false) {
-    if (!isGameStarted || isPaused || isGameOver) return;
+    if (!isGameStarted || isPaused || isGameOver || isAnimatingClear) return;
     
     player.pos.y++;
     if (collide(arena, player)) {
@@ -546,7 +569,6 @@ function playerDrop(isManual = false) {
         merge(arena, player);
         playSound('land');
         stopSoftDropLoop();
-        playerReset();
         arenaSweep();
     } else if (isManual) {
         playSound('softDrop');
@@ -555,7 +577,7 @@ function playerDrop(isManual = false) {
 }
 
 function playerMove(dir) {
-    if (!isGameStarted || isPaused || isGameOver) return;
+    if (!isGameStarted || isPaused || isGameOver || isAnimatingClear) return;
     player.pos.x += dir;
     if (collide(arena, player)) {
         player.pos.x -= dir;
@@ -585,7 +607,7 @@ function playerReset() {
 }
 
 function playerRotate(dir) {
-    if (!isGameStarted || isPaused || isGameOver) return;
+    if (!isGameStarted || isPaused || isGameOver || isAnimatingClear) return;
     const pos = player.pos.x;
     let offset = 1;
     rotate(player.matrix, dir);
@@ -612,7 +634,7 @@ function rotate(matrix, dir) {
 }
 
 function togglePause() {
-    if (!isGameStarted || isGameOver) return;
+    if (!isGameStarted || isGameOver || isAnimatingClear) return;
     isPaused = !isPaused;
     if (isPaused) stopSoftDropLoop();
     const overlay = document.getElementById('pause-overlay');
@@ -637,6 +659,8 @@ function restartGame() {
     dropInterval = 850;
     isGameOver = false;
     isPaused = false;
+    isAnimatingClear = false;
+    clearedRows = [];
     stopSoftDropLoop();
     nextPieceMatrix = null;
     document.getElementById('gameover-overlay').classList.add('hidden');
@@ -682,7 +706,7 @@ document.addEventListener('keydown', event => {
         return;
     }
 
-    if (!isGameStarted || isPaused || isGameOver) return;
+    if (!isGameStarted || isPaused || isGameOver || isAnimatingClear) return;
 
     if (event.keyCode === 37) playerMove(-1);
     else if (event.keyCode === 39) playerMove(1);
