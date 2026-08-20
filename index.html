@@ -16,26 +16,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
+            padding-top: 10px;
             user-select: none;
             -webkit-user-select: none;
         }
         .main-wrapper {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            width: 248px;
-            margin-bottom: 10px;
-            font-size: 18px;
-            font-weight: bold;
-            border-bottom: 2px solid #fff;
-            padding-bottom: 5px;
+            align-items: center;
         }
         .game-layout {
             display: flex;
@@ -57,10 +48,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            width: 80px;
+            gap: 15px;
+        }
+        .next-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             background: #000;
             border: 3px solid #fff;
             padding: 6px;
-            width: 70px;
+            width: 100%;
         }
         .next-title {
             font-size: 11px;
@@ -75,6 +73,34 @@
         canvas#next {
             background-color: #000;
             display: block;
+        }
+        .stats-box {
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .stat-label {
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .stat-divider {
+            width: 100%;
+            height: 2px;
+            background-color: #fff;
+            margin: 2px 0;
         }
         .overlay {
             position: absolute;
@@ -131,6 +157,40 @@
             50% { opacity: 0.3; }
         }
 
+        /* Controls Area */
+        .controls-container {
+            display: flex;
+            justify-content: space-between;
+            width: 340px;
+            margin-top: 20px;
+            padding: 0 5px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+        .control-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: #fff;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
+            border: none;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .control-btn:active {
+            background: #ccc;
+            transform: scale(0.95);
+        }
+
         .mobile-guide { display: none; }
         @media (pointer: coarse), (max-width: 768px) {
             .desktop-guide { display: none; }
@@ -141,11 +201,6 @@
 <body>
 
 <div class="main-wrapper">
-    <div class="header">
-        <div>SCORE: <span id="score">0</span></div>
-        <div>LVL: <span id="level">1</span></div>
-    </div>
-    
     <div class="game-layout">
         <div class="game-container">
             <canvas id="tetris" width="240" height="400"></canvas>
@@ -161,9 +216,7 @@
                 </div>
 
                 <div class="guide-box mobile-guide">
-                    TAP LEFT/RIGHT : MOVE<br>
-                    SWIPE UP ↑ : ROTATE<br>
-                    SWIPE DOWN ↓ : SOFT DROP<br>
+                    TAP BUTTONS BELOW<br>
                     <b>2-FINGER TAP</b> : PAUSE
                 </div>
 
@@ -179,10 +232,38 @@
             </div>
         </div>
         
-        <!-- กล่องแสดงชิ้นถัดไป ย่อขนาด 1/4 -->
+        <!-- Side Panel: Next Block + Stats -->
         <div class="side-panel">
-            <div class="next-title">NEXT</div>
-            <canvas id="next" width="60" height="60"></canvas>
+            <div class="next-box">
+                <div class="next-title">NEXT</div>
+                <canvas id="next" width="60" height="60"></canvas>
+            </div>
+
+            <div class="stats-box">
+                <div class="stat-group">
+                    <div class="stat-label">SCORE</div>
+                    <div class="stat-value" id="score">0</div>
+                </div>
+
+                <div class="stat-divider"></div>
+
+                <div class="stat-group">
+                    <div class="stat-label">LVL</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- On-screen Control Buttons -->
+    <div class="controls-container">
+        <div class="btn-group">
+            <button class="control-btn" id="btn-left">←</button>
+            <button class="control-btn" id="btn-right">→</button>
+        </div>
+        <div class="btn-group">
+            <button class="control-btn" id="btn-rotate">↻</button>
+            <button class="control-btn" id="btn-down">↓</button>
         </div>
     </div>
 </div>
@@ -194,7 +275,6 @@ context.scale(20, 20);
 
 const nextCanvas = document.getElementById('next');
 const nextContext = nextCanvas.getContext('2d');
-// ย่อขนาดสเกลลงเหลือ 15px เพื่อให้ขนาดชิ้นสัดส่วนเล็กลงพอดีกล่อง
 nextContext.scale(15, 15);
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -538,6 +618,7 @@ function updateScore() {
     document.getElementById('level').innerText = player.level;
 }
 
+/* Event Listeners สำหรับ คีย์บอร์ด */
 document.addEventListener('keydown', event => {
     if (!isGameStarted) {
         if (event.keyCode === 32) startGame();
@@ -560,10 +641,42 @@ document.addEventListener('keyup', event => {
     }
 });
 
-let touchStartX = 0;
-let touchStartY = 0;
+/* Event Listeners สำหรับ ปุ่มกดหน้าจอ On-screen */
+function handleStartOrState() {
+    if (!isGameStarted) { startGame(); return true; }
+    if (isGameOver) { restartGame(); return true; }
+    if (isPaused) { togglePause(); return true; }
+    return false;
+}
 
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnRotate = document.getElementById('btn-rotate');
+const btnDown = document.getElementById('btn-down');
+
+btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(-1); });
+btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(1); });
+btnRotate.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerRotate(1); });
+
+btnDown.addEventListener('touchstart', (e) => { 
+    e.preventDefault(); 
+    if (handleStartOrState()) return; 
+    playerDrop(true); 
+});
+btnDown.addEventListener('touchend', (e) => { 
+    e.preventDefault(); 
+    isDropLocked = false; 
+});
+
+// คลิกเมาส์ (สำหรับทดสอบบนคอม)
+btnLeft.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(-1); });
+btnRight.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(1); });
+btnRotate.addEventListener('click', () => { if (handleStartOrState()) return; playerRotate(1); });
+
+/* สัมผัสหน้าจอส่วน Overlay (เพื่อกด Start/Pause) */
 document.addEventListener('touchstart', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    
     if (!isGameStarted) {
         startGame();
         return;
@@ -573,40 +686,7 @@ document.addEventListener('touchstart', (e) => {
         togglePause();
         return;
     }
-
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
 }, { passive: false });
-
-document.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-}, { passive: false });
-
-document.addEventListener('touchend', (e) => {
-    isDropLocked = false;
-
-    if (!isGameStarted) return;
-    if (isGameOver) { restartGame(); return; }
-    if (isPaused) { togglePause(); return; }
-
-    const touch = e.changedTouches[0];
-    const diffX = touch.clientX - touchStartX;
-    const diffY = touch.clientY - touchStartY;
-    const absX = Math.abs(diffX);
-    const absY = Math.abs(diffY);
-
-    if (Math.max(absX, absY) > 30) {
-        if (absY > absX) {
-            if (diffY < 0) playerRotate(1);
-            else playerDrop(true);
-        }
-    } else {
-        const screenWidth = window.innerWidth;
-        if (touchStartX < screenWidth / 2) playerMove(-1);
-        else playerMove(1);
-    }
-});
 
 update();
 </script>
