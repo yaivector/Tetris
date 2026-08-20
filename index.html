@@ -157,17 +157,17 @@
             50% { opacity: 0.3; }
         }
 
-        /* Controls Area Layering */
+        /* Controls Area */
         .controls-container {
             display: flex;
             justify-content: space-between;
             width: 340px;
             margin-top: 15px;
-            padding: 0 5px;
-            align-items: flex-start;
+            padding: 0 10px;
+            align-items: center; /* จัดกึ่งกลางแนวตั้งระหว่างสองฝั่ง */
         }
         
-        /* D-Pad ด้านซ้าย วางแบบ T-Shape (ซ้าย-ขวา ข้างบน, ลง ด้านล่างตรงกลาง) */
+        /* D-Pad ฝั่งซ้าย */
         .dpad-group {
             display: flex;
             flex-direction: column;
@@ -179,13 +179,14 @@
             gap: 12px;
         }
 
-        /* กลุ่มปุ่มขวา */
+        /* ปุ่มฝั่งขวา */
         .action-group {
             display: flex;
-            gap: 12px;
             align-items: center;
+            justify-content: center;
         }
 
+        /* ปุ่มทั่วไปฝั่งซ้าย */
         .control-btn {
             width: 52px;
             height: 52px;
@@ -203,12 +204,18 @@
             outline: none;
             -webkit-tap-highlight-color: transparent;
         }
+        
+        /* ปุ่มหมุนขนาดใหญ่พิเศษฝั่งขวา */
+        .btn-rotate-large {
+            width: 80px;
+            height: 80px;
+            font-size: 38px;
+            box-shadow: 0 6px 16px rgba(255, 255, 255, 0.3);
+        }
+
         .control-btn:active {
             background: #ccc;
             transform: scale(0.95);
-        }
-        .control-btn.btn-harddrop {
-            font-size: 24px;
         }
 
         .mobile-guide { display: none; }
@@ -239,7 +246,7 @@
                 <div class="guide-box mobile-guide">
                     TAP BUTTONS BELOW<br>
                     <b>↓</b> : SOFT DROP (HOLD)<br>
-                    <b>⤓</b> : HARD DROP TO BOTTOM<br>
+                    <b>↻</b> : ROTATE BLOCK<br>
                     <b>2-FINGER TAP</b> : PAUSE
                 </div>
 
@@ -278,7 +285,7 @@
         </div>
     </div>
 
-    <!-- On-screen Control Buttons Layout ตามแบบ -->
+    <!-- On-screen Control Buttons Layout -->
     <div class="controls-container">
         <!-- ฝั่งซ้าย: ←  → และ ↓ อยู่ตรงกลางล่าง -->
         <div class="dpad-group">
@@ -289,10 +296,9 @@
             <button class="control-btn" id="btn-down">↓</button>
         </div>
 
-        <!-- ฝั่งขวา: ↻ และ ⤓ อยู่แนวนอนขนานกัน -->
+        <!-- ฝั่งขวา: ปุ่มหมุนใหญ่เด่นปุ่มเดียว -->
         <div class="action-group">
-            <button class="control-btn" id="btn-rotate">↻</button>
-            <button class="control-btn btn-harddrop" id="btn-harddrop">⤓</button>
+            <button class="control-btn btn-rotate-large" id="btn-rotate">↻</button>
         </div>
     </div>
 </div>
@@ -724,7 +730,6 @@ const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 const btnRotate = document.getElementById('btn-rotate');
 const btnDown = document.getElementById('btn-down');
-const btnHardDrop = document.getElementById('btn-harddrop');
 
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(1); });
@@ -740,17 +745,10 @@ btnDown.addEventListener('touchend', (e) => {
     stopSoftDropLoop(); 
 });
 
-btnHardDrop.addEventListener('touchstart', (e) => { 
-    e.preventDefault(); 
-    if (handleStartOrState()) return; 
-    playerHardDrop(); 
-});
-
 // สำหรับทดสอบบนคอมพิวเตอร์
 btnLeft.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('click', () => { if (handleStartOrState()) return; playerRotate(1); });
-btnHardDrop.addEventListener('click', () => { if (handleStartOrState()) return; playerHardDrop(); });
 
 btnDown.addEventListener('mousedown', () => { if (handleStartOrState()) return; startSoftDropLoop(); });
 btnDown.addEventListener('mouseup', () => { stopSoftDropLoop(); });
