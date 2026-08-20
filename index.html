@@ -103,7 +103,6 @@
             margin: 2px 0;
         }
         
-        /* ปุ่ม PAUSED ด้านข้าง */
         .pause-btn {
             background: #000;
             color: #fff;
@@ -180,7 +179,6 @@
             50% { opacity: 0.3; }
         }
 
-        /* Controls Area */
         .controls-container {
             display: flex;
             justify-content: space-between;
@@ -273,7 +271,6 @@
             </div>
         </div>
         
-        <!-- Side Panel: Next Block + Stats + Pause Button -->
         <div class="side-panel">
             <div class="next-box">
                 <div class="next-title">NEXT</div>
@@ -294,23 +291,21 @@
                 </div>
             </div>
 
-            <!-- ปุ่ม PAUSE ด้านข้าง -->
-            <button class="pause-btn" id="btn-side-pause">PAUSED</button>
+            <button class="pause-btn" id="btn-side-pause" tabindex="-1">PAUSED</button>
         </div>
     </div>
 
-    <!-- Controls Container -->
     <div class="controls-container">
         <div class="dpad-group">
             <div class="dpad-row">
-                <button class="control-btn" id="btn-left">←</button>
-                <button class="control-btn" id="btn-right">→</button>
+                <button class="control-btn" id="btn-left" tabindex="-1">←</button>
+                <button class="control-btn" id="btn-right" tabindex="-1">→</button>
             </div>
-            <button class="control-btn" id="btn-down">↓</button>
+            <button class="control-btn" id="btn-down" tabindex="-1">↓</button>
         </div>
 
         <div class="action-group">
-            <button class="control-btn" id="btn-rotate">↻</button>
+            <button class="control-btn" id="btn-rotate" tabindex="-1">↻</button>
         </div>
     </div>
 </div>
@@ -451,9 +446,12 @@ function addScore(points) {
     updateScore();
 }
 
+/* แก้ไขระบบการตรวจจับและเคลียร์แถวเต็มแบบสมบูรณ์ */
 function arenaSweep() {
     clearedRows = [];
-    for (let y = arena.length - 1; y > 0; --y) {
+    
+    // ตรวจสอบหาแถวที่เต็มทั้งหมด
+    for (let y = arena.length - 1; y >= 0; --y) {
         let isFull = true;
         for (let x = 0; x < arena[y].length; ++x) {
             if (arena[y][x] === 0) {
@@ -471,10 +469,21 @@ function arenaSweep() {
         playSound('clear');
 
         setTimeout(() => {
-            clearedRows.forEach(y => {
-                const row = arena.splice(y, 1)[0].fill(0);
-                arena.unshift(row);
-            });
+            // ทำการลบแถวที่เต็มออกจาก Arena และดันแถวใหม่ลงมา
+            for (let y = arena.length - 1; y >= 0; --y) {
+                let isFull = true;
+                for (let x = 0; x < arena[y].length; ++x) {
+                    if (arena[y][x] === 0) {
+                        isFull = false;
+                        break;
+                    }
+                }
+                if (isFull) {
+                    const row = arena.splice(y, 1)[0].fill(0);
+                    arena.unshift(row);
+                    y++; // ขยับ y เพิ่มกลับขึ้นไปเพื่อไม่ให้ลูปข้ามแถวที่เลื่อนลงมาใหม่
+                }
+            }
 
             let pointsGain = 0;
             const count = clearedRows.length;
@@ -708,9 +717,17 @@ function stopSoftDropLoop() {
     }
 }
 
-/* Event Listeners สำหรับ คีย์บอร์ด */
+/* ปรับปรุง Keyboard Listeners ป้องกันปุ่มติดโฟกัส */
 document.addEventListener('keydown', event => {
+    // ป้องกันปุ่ม Spacebar เลื่อนหน้าจอ
+    if (event.keyCode === 32) {
+        event.preventDefault();
+    }
+
     if (event.keyCode === 32 || event.keyCode === 80) {
+        if (document.activeElement && document.activeElement.tagName === 'BUTTON') {
+            document.activeElement.blur();
+        }
         if (!isGameStarted) { startGame(); return; }
         if (isGameOver) { restartGame(); return; }
         togglePause();
@@ -731,7 +748,6 @@ document.addEventListener('keyup', event => {
     }
 });
 
-/* Event Handlers สำหรับปุ่มกดบนหน้าจอ */
 function handleStartOrState() {
     if (!isGameStarted) { startGame(); return true; }
     if (isGameOver) { restartGame(); return true; }
@@ -745,20 +761,13 @@ const btnRotate = document.getElementById('btn-rotate');
 const btnDown = document.getElementById('btn-down');
 const btnSidePause = document.getElementById('btn-side-pause');
 
-/* ปุ่ม PAUSED ด้านข้าง */
-btnSidePause.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (!isGameStarted) { startGame(); return; }
-    if (isGameOver) { restartGame(); return; }
-    togglePause();
-});
 btnSidePause.addEventListener('click', (e) => {
+    e.target.blur();
     if (!isGameStarted) { startGame(); return; }
     if (isGameOver) { restartGame(); return; }
     togglePause();
 });
 
-/* ปุ่ม D-Pad และ Rotate */
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerRotate(1); });
@@ -773,15 +782,14 @@ btnDown.addEventListener('touchend', (e) => {
     stopSoftDropLoop(); 
 });
 
-btnLeft.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(-1); });
-btnRight.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(1); });
-btnRotate.addEventListener('click', () => { if (handleStartOrState()) return; playerRotate(1); });
+btnLeft.addEventListener('click', (e) => { e.target.blur(); if (handleStartOrState()) return; playerMove(-1); });
+btnRight.addEventListener('click', (e) => { e.target.blur(); if (handleStartOrState()) return; playerMove(1); });
+btnRotate.addEventListener('click', (e) => { e.target.blur(); if (handleStartOrState()) return; playerRotate(1); });
 
-btnDown.addEventListener('mousedown', () => { if (handleStartOrState()) return; startSoftDropLoop(); });
+btnDown.addEventListener('mousedown', (e) => { e.target.blur(); if (handleStartOrState()) return; startSoftDropLoop(); });
 btnDown.addEventListener('mouseup', () => { stopSoftDropLoop(); });
 btnDown.addEventListener('mouseleave', () => { stopSoftDropLoop(); });
 
-/* แตะหน้าจอเพื่อ Start / Resume กรณีค้างอยู่บน Overlay */
 document.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'BUTTON') return;
     if (!isGameStarted) { startGame(); return; }
