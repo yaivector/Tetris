@@ -49,7 +49,7 @@
             flex-direction: column;
             align-items: center;
             width: 80px;
-            gap: 15px;
+            gap: 12px;
         }
         .next-box {
             display: flex;
@@ -79,7 +79,7 @@
             text-align: center;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
         .stat-group {
             display: flex;
@@ -94,7 +94,7 @@
         .stat-value {
             font-size: 18px;
             font-weight: bold;
-            margin-top: 4px;
+            margin-top: 2px;
         }
         .stat-divider {
             width: 100%;
@@ -102,6 +102,29 @@
             background-color: #fff;
             margin: 2px 0;
         }
+        
+        /* ปุ่ม PAUSED ด้านข้าง */
+        .pause-btn {
+            background: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 8px 2px;
+            width: 100%;
+            letter-spacing: 1px;
+            cursor: pointer;
+            outline: none;
+            text-align: center;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pause-btn:active {
+            background: #fff;
+            color: #000;
+        }
+
         .overlay {
             position: absolute;
             top: 0;
@@ -167,7 +190,6 @@
             align-items: center;
         }
         
-        /* D-Pad ฝั่งซ้าย */
         .dpad-group {
             display: flex;
             flex-direction: column;
@@ -179,14 +201,12 @@
             gap: 14px;
         }
 
-        /* ปุ่มฝั่งขวา */
         .action-group {
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        /* ปรับปุ่มให้ขนาดใหญ่เท่ากันหมด (72px) เพื่อคนเล็บยาวกดง่าย */
         .control-btn {
             width: 72px;
             height: 72px;
@@ -238,7 +258,7 @@
                     TAP BUTTONS BELOW<br>
                     <b>↓</b> : SOFT DROP (HOLD)<br>
                     <b>↻</b> : ROTATE BLOCK<br>
-                    <b>2-FINGER TAP</b> : PAUSE
+                    <b>PAUSED</b> : PAUSE / CONTINUE
                 </div>
 
                 <div class="blink-btn">PRESS SPACE / TAP<br>TO START</div>
@@ -253,7 +273,7 @@
             </div>
         </div>
         
-        <!-- Side Panel: Next Block + Stats -->
+        <!-- Side Panel: Next Block + Stats + Pause Button -->
         <div class="side-panel">
             <div class="next-box">
                 <div class="next-title">NEXT</div>
@@ -273,12 +293,14 @@
                     <div class="stat-value" id="level">1</div>
                 </div>
             </div>
+
+            <!-- ปุ่ม PAUSE ด้านข้าง -->
+            <button class="pause-btn" id="btn-side-pause">PAUSED</button>
         </div>
     </div>
 
-    <!-- On-screen Control Buttons Layout -->
+    <!-- Controls Container -->
     <div class="controls-container">
-        <!-- ฝั่งซ้าย: ปุ่มทิศทางใหญ่ 72px -->
         <div class="dpad-group">
             <div class="dpad-row">
                 <button class="control-btn" id="btn-left">←</button>
@@ -287,7 +309,6 @@
             <button class="control-btn" id="btn-down">↓</button>
         </div>
 
-        <!-- ฝั่งขวา: ปุ่มหมุนใหญ่ 72px เท่ากัน -->
         <div class="action-group">
             <button class="control-btn" id="btn-rotate">↻</button>
         </div>
@@ -449,7 +470,6 @@ function arenaSweep() {
         isAnimatingClear = true;
         playSound('clear');
 
-        // แสดงเอฟเฟกซ์กระพริบสว่าง (Flash Effect) ก่อนเคลื่อนลง
         setTimeout(() => {
             clearedRows.forEach(y => {
                 const row = arena.splice(y, 1)[0].fill(0);
@@ -495,7 +515,6 @@ function draw() {
 
     drawMatrix(arena, {x: 0, y: 0}, context);
 
-    // วาด Flash animation แถวที่กำลังจะถูกเคลียร์
     if (isAnimatingClear && clearedRows.length > 0) {
         context.fillStyle = '#FFF';
         clearedRows.forEach(y => {
@@ -674,7 +693,6 @@ function updateScore() {
     document.getElementById('level').innerText = player.level;
 }
 
-/* ระบบกดค้างลงต่อเนื่อง (Hold Down) */
 function startSoftDropLoop() {
     if (softDropIntervalTimer) return;
     playerDrop(true);
@@ -692,16 +710,9 @@ function stopSoftDropLoop() {
 
 /* Event Listeners สำหรับ คีย์บอร์ด */
 document.addEventListener('keydown', event => {
-    // สเปสบาร์ (Space) หรือ P สำหรับ Pause/Start/Restart
     if (event.keyCode === 32 || event.keyCode === 80) {
-        if (!isGameStarted) {
-            startGame();
-            return;
-        }
-        if (isGameOver) {
-            restartGame();
-            return;
-        }
+        if (!isGameStarted) { startGame(); return; }
+        if (isGameOver) { restartGame(); return; }
         togglePause();
         return;
     }
@@ -720,7 +731,7 @@ document.addEventListener('keyup', event => {
     }
 });
 
-/* Event Listeners สำหรับ ปุ่มกดหน้าจอ On-screen */
+/* Event Handlers สำหรับปุ่มกดบนหน้าจอ */
 function handleStartOrState() {
     if (!isGameStarted) { startGame(); return true; }
     if (isGameOver) { restartGame(); return true; }
@@ -732,7 +743,22 @@ const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 const btnRotate = document.getElementById('btn-rotate');
 const btnDown = document.getElementById('btn-down');
+const btnSidePause = document.getElementById('btn-side-pause');
 
+/* ปุ่ม PAUSED ด้านข้าง */
+btnSidePause.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!isGameStarted) { startGame(); return; }
+    if (isGameOver) { restartGame(); return; }
+    togglePause();
+});
+btnSidePause.addEventListener('click', (e) => {
+    if (!isGameStarted) { startGame(); return; }
+    if (isGameOver) { restartGame(); return; }
+    togglePause();
+});
+
+/* ปุ่ม D-Pad และ Rotate */
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerRotate(1); });
@@ -747,7 +773,6 @@ btnDown.addEventListener('touchend', (e) => {
     stopSoftDropLoop(); 
 });
 
-// สำหรับทดสอบบนคอมพิวเตอร์
 btnLeft.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('click', () => { if (handleStartOrState()) return; playerRotate(1); });
@@ -756,19 +781,11 @@ btnDown.addEventListener('mousedown', () => { if (handleStartOrState()) return; 
 btnDown.addEventListener('mouseup', () => { stopSoftDropLoop(); });
 btnDown.addEventListener('mouseleave', () => { stopSoftDropLoop(); });
 
-/* สัมผัสหน้าจอส่วน Overlay (เพื่อกด Start/Pause) */
+/* แตะหน้าจอเพื่อ Start / Resume กรณีค้างอยู่บน Overlay */
 document.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'BUTTON') return;
-    
-    if (!isGameStarted) {
-        startGame();
-        return;
-    }
-    if (e.touches.length >= 2) {
-        e.preventDefault();
-        togglePause();
-        return;
-    }
+    if (!isGameStarted) { startGame(); return; }
+    if (isPaused) { togglePause(); return; }
 }, { passive: false });
 
 update();
