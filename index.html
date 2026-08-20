@@ -132,8 +132,8 @@
             letter-spacing: 1px;
         }
         .guide-box {
-            font-size: 13px;
-            line-height: 1.7;
+            font-size: 12px;
+            line-height: 1.6;
             color: #ddd;
             text-align: left;
             width: 100%;
@@ -162,23 +162,23 @@
             display: flex;
             justify-content: space-between;
             width: 340px;
-            margin-top: 20px;
+            margin-top: 18px;
             padding: 0 5px;
         }
         .btn-group {
             display: flex;
-            gap: 12px;
+            gap: 10px;
         }
         .control-btn {
-            width: 55px;
-            height: 55px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             background: #fff;
             color: #000;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(255, 255, 255, 0.2);
@@ -189,6 +189,11 @@
         .control-btn:active {
             background: #ccc;
             transform: scale(0.95);
+        }
+        .control-btn.btn-harddrop {
+            background: #fff;
+            color: #000;
+            font-size: 26px;
         }
 
         .mobile-guide { display: none; }
@@ -211,12 +216,15 @@
                 <div class="guide-box desktop-guide">
                     ← / → : MOVE LEFT/RIGHT<br>
                     ↑ : ROTATE BLOCK<br>
-                    ↓ : SOFT DROP<br>
-                    <b>SPACE / P</b> : PAUSE GAME
+                    ↓ : SOFT DROP (HOLD)<br>
+                    <b>SPACE</b> : HARD DROP<br>
+                    <b>P</b> : PAUSE GAME
                 </div>
 
                 <div class="guide-box mobile-guide">
                     TAP BUTTONS BELOW<br>
+                    <b>↓</b> : SOFT DROP (HOLD)<br>
+                    <b>⤓</b> : HARD DROP TO BOTTOM<br>
                     <b>2-FINGER TAP</b> : PAUSE
                 </div>
 
@@ -264,6 +272,7 @@
         <div class="btn-group">
             <button class="control-btn" id="btn-rotate">↻</button>
             <button class="control-btn" id="btn-down">↓</button>
+            <button class="control-btn btn-harddrop" id="btn-harddrop">⤓</button>
         </div>
     </div>
 </div>
@@ -293,18 +302,26 @@ function playSound(type) {
     if (type === 'move') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(200, now);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
         osc.start(now);
-        osc.stop(now + 0.06);
+        osc.stop(now + 0.05);
     } else if (type === 'softDrop') {
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(120, now);
-        osc.frequency.linearRampToValueAtTime(60, now + 0.04);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.linearRampToValueAtTime(70, now + 0.03);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
         osc.start(now);
-        osc.stop(now + 0.04);
+        osc.stop(now + 0.03);
+    } else if (type === 'hardDrop') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.12);
     } else if (type === 'land') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(100, now);
@@ -336,9 +353,9 @@ const arena = createMatrix(12, 20);
 let isGameStarted = false;
 let isPaused = false;
 let isGameOver = false;
-let isDropLocked = false; 
 
 let nextPieceMatrix = null;
+let softDropIntervalTimer = null;
 
 const player = {
     pos: {x: 0, y: 0},
@@ -504,22 +521,39 @@ function update(time = 0) {
 }
 
 function playerDrop(isManual = false) {
-    if (isManual && isDropLocked) return;
-
+    if (!isGameStarted || isPaused || isGameOver) return;
+    
     player.pos.y++;
     if (collide(arena, player)) {
         player.pos.y--;
         merge(arena, player);
         playSound('land');
-        
-        if (isManual) {
-            isDropLocked = true;
-        }
-
+        stopSoftDropLoop();
         playerReset();
         arenaSweep();
     } else if (isManual) {
         playSound('softDrop');
+    }
+    dropCounter = 0;
+}
+
+/* ฟังก์ชัน Hard Drop พรืดเดียวถึงพื้น */
+function playerHardDrop() {
+    if (!isGameStarted || isPaused || isGameOver) return;
+    
+    let dropDistance = 0;
+    while (!collide(arena, player)) {
+        player.pos.y++;
+        dropDistance++;
+    }
+    player.pos.y--;
+    
+    if (dropDistance > 0) {
+        merge(arena, player);
+        playSound('hardDrop');
+        stopSoftDropLoop();
+        playerReset();
+        arenaSweep();
     }
     dropCounter = 0;
 }
@@ -548,6 +582,7 @@ function playerReset() {
 
     if (collide(arena, player)) {
         isGameOver = true;
+        stopSoftDropLoop();
         playSound('gameover');
         document.getElementById('gameover-overlay').classList.remove('hidden');
     }
@@ -583,6 +618,7 @@ function rotate(matrix, dir) {
 function togglePause() {
     if (!isGameStarted || isGameOver) return;
     isPaused = !isPaused;
+    if (isPaused) stopSoftDropLoop();
     const overlay = document.getElementById('pause-overlay');
     if (isPaused) {
         overlay.classList.remove('hidden');
@@ -605,7 +641,7 @@ function restartGame() {
     dropInterval = 850;
     isGameOver = false;
     isPaused = false;
-    isDropLocked = false;
+    stopSoftDropLoop();
     nextPieceMatrix = null;
     document.getElementById('gameover-overlay').classList.add('hidden');
     document.getElementById('pause-overlay').classList.add('hidden');
@@ -616,6 +652,22 @@ function restartGame() {
 function updateScore() {
     document.getElementById('score').innerText = player.score;
     document.getElementById('level').innerText = player.level;
+}
+
+/* ระบบกดค้างลงต่อเนื่อง (Hold Down) */
+function startSoftDropLoop() {
+    if (softDropIntervalTimer) return;
+    playerDrop(true);
+    softDropIntervalTimer = setInterval(() => {
+        playerDrop(true);
+    }, 45); // ความเร็วในการเลื่อนลงขณะกดค้าง (45ms)
+}
+
+function stopSoftDropLoop() {
+    if (softDropIntervalTimer) {
+        clearInterval(softDropIntervalTimer);
+        softDropIntervalTimer = null;
+    }
 }
 
 /* Event Listeners สำหรับ คีย์บอร์ด */
@@ -630,14 +682,14 @@ document.addEventListener('keydown', event => {
 
     if (event.keyCode === 37) playerMove(-1);
     else if (event.keyCode === 39) playerMove(1);
-    else if (event.keyCode === 40) playerDrop(true);
+    else if (event.keyCode === 40) startSoftDropLoop(); // กดลูกศรลงค้าง
     else if (event.keyCode === 38) playerRotate(1);
-    else if (event.keyCode === 32) togglePause();
+    else if (event.keyCode === 32) playerHardDrop(); // Spacebar = Hard Drop
 });
 
 document.addEventListener('keyup', event => {
     if (event.keyCode === 40) {
-        isDropLocked = false;
+        stopSoftDropLoop();
     }
 });
 
@@ -653,25 +705,39 @@ const btnLeft = document.getElementById('btn-left');
 const btnRight = document.getElementById('btn-right');
 const btnRotate = document.getElementById('btn-rotate');
 const btnDown = document.getElementById('btn-down');
+const btnHardDrop = document.getElementById('btn-harddrop');
 
 btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('touchstart', (e) => { e.preventDefault(); if (handleStartOrState()) return; playerRotate(1); });
 
+// ปุ่มลง Soft Drop (รองรับกดค้าง)
 btnDown.addEventListener('touchstart', (e) => { 
     e.preventDefault(); 
     if (handleStartOrState()) return; 
-    playerDrop(true); 
+    startSoftDropLoop(); 
 });
 btnDown.addEventListener('touchend', (e) => { 
     e.preventDefault(); 
-    isDropLocked = false; 
+    stopSoftDropLoop(); 
+});
+
+// ปุ่ม Hard Drop พรืดเดียวลงพื้น
+btnHardDrop.addEventListener('touchstart', (e) => { 
+    e.preventDefault(); 
+    if (handleStartOrState()) return; 
+    playerHardDrop(); 
 });
 
 // คลิกเมาส์ (สำหรับทดสอบบนคอม)
 btnLeft.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(-1); });
 btnRight.addEventListener('click', () => { if (handleStartOrState()) return; playerMove(1); });
 btnRotate.addEventListener('click', () => { if (handleStartOrState()) return; playerRotate(1); });
+btnHardDrop.addEventListener('click', () => { if (handleStartOrState()) return; playerHardDrop(); });
+
+btnDown.addEventListener('mousedown', () => { if (handleStartOrState()) return; startSoftDropLoop(); });
+btnDown.addEventListener('mouseup', () => { stopSoftDropLoop(); });
+btnDown.addEventListener('mouseleave', () => { stopSoftDropLoop(); });
 
 /* สัมผัสหน้าจอส่วน Overlay (เพื่อกด Start/Pause) */
 document.addEventListener('touchstart', (e) => {
