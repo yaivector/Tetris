@@ -109,7 +109,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.92);
+            background: rgba(0, 0, 0, 0.95);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -117,42 +117,31 @@
             font-size: 18px;
             font-weight: bold;
             border: 4px solid #fff;
-            padding: 15px;
+            padding: 10px;
             z-index: 10;
         }
         .hidden {
             display: none !important;
         }
 
-        .start-title {
-            font-size: 20px;
+        /* รูปภาพ How to play สำหรับเดสก์ท็อป */
+        .how-to-play-img {
+            max-width: 90%;
+            max-height: 85%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .mobile-start-guide {
+            display: none;
+            font-size: 18px;
+            font-weight: bold;
             color: #fff;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #fff;
-            padding-bottom: 4px;
             letter-spacing: 1px;
-        }
-        .guide-box {
-            font-size: 12px;
-            line-height: 1.6;
-            color: #ddd;
-            text-align: left;
-            width: 100%;
-            margin-bottom: 15px;
-        }
-        .guide-box b {
-            color: #fff;
-        }
-        .blink-btn {
-            font-size: 13px;
-            color: #fff;
-            animation: blink 1.2s infinite;
-            border: 2px solid #fff;
-            padding: 8px 10px;
-            background: #111;
-            line-height: 1.4;
             text-align: center;
+            animation: blink 1.2s infinite;
         }
+
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
@@ -160,7 +149,7 @@
 
         /* Layout ปุ่มคอนโทรลด้านล่าง */
         .controls-container {
-            display: flex;
+            display: none; /* ซ่อนเป็นค่าเริ่มต้นบนเดสก์ท็อป */
             justify-content: space-between;
             width: 350px;
             margin-top: -65px;
@@ -210,10 +199,17 @@
             transform: scale(0.94);
         }
 
-        .mobile-guide { display: none; }
+        /* ตรวจจับอุปกรณ์สายจอมือถือ/สัมผัส */
         @media (pointer: coarse), (max-width: 768px) {
-            .desktop-guide { display: none; }
-            .mobile-guide { display: block; }
+            .how-to-play-img {
+                display: none; /* ซ่อนรูปภาพบนมือถือ */
+            }
+            .mobile-start-guide {
+                display: block; /* แสดงข้อความ "แตะเพื่อเล่น" บนมือถือ */
+            }
+            .controls-container {
+                display: flex; /* แสดงปุ่มควบคุมบนมือถือ */
+            }
         }
     </style>
 </head>
@@ -225,24 +221,11 @@
             <canvas id="tetris" width="240" height="400"></canvas>
             
             <div id="start-overlay" class="overlay">
-                <div class="start-title">HOW TO PLAY</div>
+                <!-- รูปภาพสำหรับเดสก์ท็อป -->
+                <img src="howtoplay.png" alt="How to Play" class="how-to-play-img">
                 
-                <div class="guide-box desktop-guide">
-                    ← / → : MOVE LEFT/RIGHT (HOLD)<br>
-                    ↑ : ROTATE BLOCK<br>
-                    ↓ : SOFT DROP (HOLD)<br>
-                    <b>SPACE / P</b> : PAUSE GAME
-                </div>
-
-                <div class="guide-box mobile-guide">
-                    TAP/HOLD BUTTONS BELOW<br>
-                    <b>← / →</b> : MOVE LEFT/RIGHT<br>
-                    <b>↓</b> : SOFT DROP (HOLD)<br>
-                    <b>↻</b> : ROTATE BLOCK<br>
-                    <b>❚❚</b> : PAUSE / CONTINUE
-                </div>
-
-                <div class="blink-btn">PRESS SPACE / TAP<br>TO START</div>
+                <!-- ข้อความสำหรับมือถือ -->
+                <div class="mobile-start-guide">แตะเพื่อเล่น</div>
             </div>
 
             <div id="pause-overlay" class="overlay hidden">
@@ -276,7 +259,7 @@
         </div>
     </div>
 
-    <!-- Area ปุ่มกดสัมผัส -->
+    <!-- Area ปุ่มกดสัมผัส (แสดงเฉพาะบนมือถือ) -->
     <div class="controls-container">
         <!-- ฝั่งซ้าย: D-Pad -->
         <div class="dpad-group">
@@ -369,7 +352,6 @@ let clearedRows = [];
 let nextPieceMatrix = null;
 let softDropIntervalTimer = null;
 
-/* ตัวแปรสำหรับคุมการกดซ้าย-ขวา ค้างไว้ (DAS: Delayed Auto-Shift) */
 let moveTimeout = null;
 let moveInterval = null;
 let activeMoveDir = 0;
@@ -602,7 +584,6 @@ function playerMove(dir) {
     }
 }
 
-/* ฟังก์ชันสำหรับการกดซ้าย/ขวาค้างไว้อย่างต่อเนื่อง */
 function startContinuousMove(dir) {
     if (activeMoveDir === dir) return;
     stopContinuousMove();
@@ -613,8 +594,8 @@ function startContinuousMove(dir) {
     moveTimeout = setTimeout(() => {
         moveInterval = setInterval(() => {
             playerMove(dir);
-        }, 50); // ความเร็วในการเลื่อนต่อเนื่อง (50ms)
-    }, 150); // ระยะเวลารอก่อนเริ่มเลื่อนต่อเนื่อง (150ms)
+        }, 50);
+    }, 150);
 }
 
 function stopContinuousMove() {
@@ -707,7 +688,6 @@ function restartGame() {
     stopSoftDropLoop();
     stopContinuousMove();
     nextPieceMatrix = null;
-    document.getElementById('gameover-overlay').classList.remove('hidden');
     document.getElementById('gameover-overlay').classList.add('hidden');
     document.getElementById('pause-overlay').classList.add('hidden');
     updateScore();
@@ -734,7 +714,7 @@ function stopSoftDropLoop() {
     }
 }
 
-/* Keyboard Events รองรับการกดค้าง */
+/* Keyboard Events */
 document.addEventListener('keydown', event => {
     if (event.keyCode === 32) {
         event.preventDefault();
@@ -753,7 +733,7 @@ document.addEventListener('keydown', event => {
 
     if (!isGameStarted || isPaused || isGameOver || isAnimatingClear) return;
 
-    if (keyState[event.keyCode]) return; // ป้องกัน Event ซ้ำจากระบบ OS
+    if (keyState[event.keyCode]) return;
     keyState[event.keyCode] = true;
 
     if (event.keyCode === 37) startContinuousMove(-1);
@@ -790,7 +770,7 @@ btnPause.addEventListener('touchstart', (e) => {
     togglePause();
 });
 
-/* ปุ่มซ้าย - ขวา (Touch & Mouse events สำหรับการกดค้างบนหน้าจอ) */
+/* ปุ่มซ้าย - ขวา */
 const handleLeftStart = (e) => {
     e.preventDefault();
     if (handleStartOrState()) return;
@@ -840,10 +820,18 @@ btnDown.addEventListener('mousedown', (e) => { e.target.blur(); if (handleStartO
 btnDown.addEventListener('mouseup', () => { stopSoftDropLoop(); });
 btnDown.addEventListener('mouseleave', () => { stopSoftDropLoop(); });
 
+/* คลิกหรือแตะหน้าจอเพื่อเริ่มเกม */
+document.addEventListener('click', () => {
+    if (!isGameStarted) { startGame(); }
+    else if (isPaused) { togglePause(); }
+    else if (isGameOver) { restartGame(); }
+});
+
 document.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'BUTTON') return;
-    if (!isGameStarted) { startGame(); return; }
-    if (isPaused) { togglePause(); return; }
+    if (!isGameStarted) { startGame(); }
+    else if (isPaused) { togglePause(); }
+    else if (isGameOver) { restartGame(); }
 }, { passive: false });
 
 update();
